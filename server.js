@@ -20,6 +20,7 @@ var httpsServerOptions = {
   	ca: [b2, b1]
 };
 
+const SERVERIP = config.get('Fas.serverip');
 const FAS_USER = config.get('Fas.clientId');
 const FAS_PASS = config.get('Fas.clientSecret');
 const FAS_REDIRECT_URI = config.get('Fas.redirectUri');
@@ -41,6 +42,11 @@ function PromiseGet (token) {
 
 const app = express();
 app.use(express.json());
+app.get('/', function(req, res) {
+	res.writeHead(200, { 'Content-Type': 'text/plain' });
+	res.status(200).end("nothing here.\n");
+	}
+);
 app.get('/auth', function(req, res) {
   var parsedQs            = querystring.parse(url.parse(req.url).query);
   var authorization_code  = parsedQs['code']; // authorization_code
@@ -65,8 +71,8 @@ app.get('/auth', function(req, res) {
 
 });
 
-https.createServer(httpsServerOptions, app).listen(4433, '172.18.0.111', function() {
+https.createServer(httpsServerOptions, app).listen(4433, SERVERIP, function() {
     //console.log(options.cert);
-    console.log("server listening...");
+    console.log("server listening..." + SERVERIP);
   }
 );
