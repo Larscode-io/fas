@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 const request = require('request');
 const jwt_decode = require('jwt-decode');
 const config = require('config');
+const moment = require('moment');
 var rP = require('request-promise');
 
 var privateKey = fs.readFileSync(__dirname + '/key2/server.key', 'utf8');
@@ -27,17 +28,28 @@ const FAS_REDIRECT_URI = config.get('Fas.redirectUri');
 const FAS_ACCESSTOKEN_URI = config.get('Fas.accessTokenUri');
 const FAS_USERINFO_URI = config.get('Fas.userinfoUri');
 
+String.prototype.insert_at=function(index, string)
+{
+  return this.substr(0, index) + string + this.substr(index);
+}
+
+function reverse(s){
+    return s.split("").reverse().join("");
+}
+
 function PromisePost (code) {
   var optionsPost = { method: 'POST', url: FAS_ACCESSTOKEN_URI, json: true, form: { grant_type: 'authorization_code', code: code, redirect_uri: FAS_REDIRECT_URI, },
     auth: { user: FAS_USER, pass: FAS_PASS },
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' } };
-  return new rP(optionsPost)
+  return rP(optionsPost)
       .then( body => body['access_token'] )
+			.catch(err => { console.log("POST " + err.message); throw new Error ("POST authz code failed"); })
 };
 function PromiseGet (token) {
   var optionsGet = { method: 'GET', url: FAS_USERINFO_URI, headers: { 'Authorization': 'Bearer' + ' ' + token }, json:true };
   return rP(optionsGet)
     .then( res => jwt_decode(res)['egovNRN'] )
+		.catch(err => { console.log("GET " + err.message); throw new Error("GET token failed"); })
   };
 
 const app = express();
@@ -59,12 +71,16 @@ app.get('/auth', function(req, res) {
   		let token = await http_promise1;
   		let http_promise2 = PromiseGet(token);
   		let NRN = await http_promise2;
-      console.log('NRN: ' + NRN);
+			let daat = moment(NRN.slice(0,6).insert_at(0,"19").insert_at(4,"-").insert_at(7,"-"), 'YYYY-MM-DD').format('LL');
+			console.log(daat);
+      console.log('NRN: ' + daat);
       res.writeHead(200, { 'Content-Type': 'text/plain' });
-      res.status(200).end(NRN + "\n");
+      res.status(200).end(NRN + " => " + daat + "\n");
   	}
   	catch(error) {
-  		console.log(error);
+			res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.status(200).end("Something went wrong, check console log, did you reload your browser ?\n");
+  		console.log(">>> " + error.message);
   	}
   }
   makeSynchronousRequest();
